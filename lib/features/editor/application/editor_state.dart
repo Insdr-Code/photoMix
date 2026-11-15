@@ -13,6 +13,8 @@ class EditorState {
     this.project,
     this.images = const {},
     this.selectedLayerId,
+    this.canUndo = false,
+    this.canRedo = false,
     this.errorMessage,
   });
 
@@ -20,6 +22,8 @@ class EditorState {
   final EditorProject? project;
   final Map<String, ui.Image> images;
   final String? selectedLayerId;
+  final bool canUndo;
+  final bool canRedo;
   final String? errorMessage;
 
   ImageLayer? get selectedLayer {
@@ -36,6 +40,8 @@ class EditorState {
     Object? project = _unchanged,
     Map<String, ui.Image>? images,
     Object? selectedLayerId = _unchanged,
+    bool? canUndo,
+    bool? canRedo,
     Object? errorMessage = _unchanged,
   }) {
     return EditorState(
@@ -47,6 +53,8 @@ class EditorState {
       selectedLayerId: identical(selectedLayerId, _unchanged)
           ? this.selectedLayerId
           : selectedLayerId as String?,
+      canUndo: canUndo ?? this.canUndo,
+      canRedo: canRedo ?? this.canRedo,
       errorMessage: identical(errorMessage, _unchanged)
           ? this.errorMessage
           : errorMessage as String?,

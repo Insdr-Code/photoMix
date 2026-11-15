@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photmix_app/features/editor/application/editor_providers.dart';
 import 'package:photmix_app/features/editor/application/editor_state.dart';
+import 'package:photmix_app/features/editor/domain/layer_crop.dart';
 import 'package:photmix_app/features/gallery/domain/gallery_models.dart';
 
 import '../../../support/editor_fakes.dart';
@@ -129,6 +130,101 @@ void main() {
       state = container.read(editorControllerProvider);
       expect(state.project?.layers, hasLength(2));
       expect(state.selectedLayer?.id, original.id);
+    });
+
+    test('registra una sola operación de opacidad en el historial', () async {
+      await loadEditor();
+      final controller = container.read(editorControllerProvider.notifier);
+      controller.beginOpacityChange();
+      controller.setSelectedOpacity(0.6);
+      controller.setSelectedOpacity(0.3);
+      controller.endOpacityChange();
+
+      expect(container.read(editorControllerProvider).canUndo, isTrue);
+      controller.undo();
+      expect(
+        container.read(editorControllerProvider).selectedLayer?.opacity,
+        1,
+      );
+      expect(container.read(editorControllerProvider).canRedo, isTrue);
+
+      controller.redo();
+      expect(
+        container.read(editorControllerProvider).selectedLayer?.opacity,
+        0.3,
+      );
+    });
+
+    test('ordena, oculta, bloquea y recorta capas con undo y redo', () async {
+      await loadEditor();
+      final controller = container.read(editorControllerProvider.notifier);
+      final initial = container.read(editorControllerProvider);
+      final topLayer = initial.selectedLayer!;
+      final bottomLayer = initial.project!.orderedLayers.first;
+
+      controller.reorderLayer(topLayer.id, 1);
+      expect(
+        container.read(editorControllerProvider).project!.orderedLayers.last.id,
+        bottomLayer.id,
+      );
+
+      controller.toggleLayerVisibility(topLayer.id);
+      controller.toggleLayerLock(topLayer.id);
+      controller.selectLayer(topLayer.id);
+      controller.toggleLayerLock(topLayer.id);
+      controller.cropSelected(const LayerCrop(left: 0.1, right: 0.2));
+
+      var layer = container
+          .read(editorControllerProvider)
+          .project!
+          .layers
+          .firstWhere((item) => item.id == topLayer.id);
+      expect(layer.visible, isFalse);
+      expect(layer.locked, isFalse);
+      expect(layer.crop.left, 0.1);
+      expect(layer.crop.right, 0.2);
+
+      controller.undo();
+      layer = container
+          .read(editorControllerProvider)
+          .project!
+          .layers
+          .firstWhere((item) => item.id == topLayer.id);
+      expect(layer.crop, const LayerCrop());
+
+      controller.redo();
+      expect(
+        container
+            .read(editorControllerProvider)
+            .project!
+            .layers
+            .firstWhere((item) => item.id == topLayer.id)
+            .crop
+            .left,
+        0.1,
+      );
+    });
+
+    test('agrupa el movimiento en una operación de historial', () async {
+      final initialState = await loadEditor();
+      final controller = container.read(editorControllerProvider.notifier);
+      final initialLayer = initialState.selectedLayer!;
+      controller.beginTransform(
+        Offset(initialLayer.positionX, initialLayer.positionY),
+      );
+      controller.updateTransform(
+        normalizedDelta: const Offset(0.1, 0),
+        scale: 1,
+        rotation: 0,
+      );
+      controller.endTransform();
+
+      expect(container.read(editorControllerProvider).canUndo, isTrue);
+      controller.undo();
+      expect(
+        container.read(editorControllerProvider).selectedLayer?.positionX,
+        initialLayer.positionX,
+      );
     });
 
     test('informa fallos de decodificación', () async {

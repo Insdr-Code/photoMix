@@ -56,8 +56,8 @@ class CompositionPainter extends CustomPainter {
   void _drawImageLayer(Canvas canvas, ImageLayer layer, ui.Image image) {
     final rect = Rect.fromCenter(
       center: Offset.zero,
-      width: layer.width * layer.scale,
-      height: layer.height * layer.scale,
+      width: layer.displayWidth * layer.scale,
+      height: layer.displayHeight * layer.scale,
     );
     final paint = Paint()
       ..filterQuality = FilterQuality.high
@@ -65,15 +65,15 @@ class CompositionPainter extends CustomPainter {
 
     canvas.save();
     _applyLayerTransform(canvas, layer);
-    canvas.drawImageRect(image, _sourceRect(image), rect, paint);
+    canvas.drawImageRect(image, _layerSourceRect(image, layer), rect, paint);
     canvas.restore();
   }
 
   void _drawSelection(Canvas canvas, ImageLayer layer, double renderScale) {
     final rect = Rect.fromCenter(
       center: Offset.zero,
-      width: layer.width * layer.scale,
-      height: layer.height * layer.scale,
+      width: layer.displayWidth * layer.scale,
+      height: layer.displayHeight * layer.scale,
     );
     final borderPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -115,6 +115,17 @@ class CompositionPainter extends CustomPainter {
 
   Rect _sourceRect(ui.Image image) {
     return Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+  }
+
+  Rect _layerSourceRect(ui.Image image, ImageLayer layer) {
+    final width = image.width.toDouble();
+    final height = image.height.toDouble();
+    return Rect.fromLTRB(
+      width * layer.crop.left,
+      height * layer.crop.top,
+      width * (1 - layer.crop.right),
+      height * (1 - layer.crop.bottom),
+    );
   }
 
   @override

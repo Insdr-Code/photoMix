@@ -36,7 +36,7 @@ void main() {
     final container = await pumpEditor(tester);
 
     expect(find.byKey(const Key('composition-canvas')), findsOneWidget);
-    expect(find.text('Capa 2'), findsOneWidget);
+    expect(find.text('Capa 2'), findsWidgets);
 
     await tester.tap(find.byKey(const Key('duplicate-layer')));
     await tester.pump();
@@ -44,7 +44,7 @@ void main() {
       container.read(editorControllerProvider).project?.layers,
       hasLength(3),
     );
-    expect(find.text('Capa 3'), findsOneWidget);
+    expect(find.text('Capa 3'), findsWidgets);
 
     await tester.tap(find.byKey(const Key('delete-layer')));
     await tester.pump();
@@ -52,7 +52,7 @@ void main() {
       container.read(editorControllerProvider).project?.layers,
       hasLength(2),
     );
-    expect(find.text('Capa 2'), findsOneWidget);
+    expect(find.text('Capa 2'), findsWidgets);
   });
 
   testWidgets('selecciona, deselecciona y mueve capas mediante gestos', (
@@ -64,7 +64,10 @@ void main() {
 
     await tester.tapAt(canvasRect.topLeft + const Offset(5, 5));
     await tester.pump();
-    expect(find.text('Selecciona una imagen en el lienzo'), findsOneWidget);
+    expect(
+      find.text('Selecciona una imagen en el lienzo o en la lista de capas.'),
+      findsOneWidget,
+    );
 
     final initialLayer = container
         .read(editorControllerProvider)
@@ -103,5 +106,91 @@ void main() {
       container.read(editorControllerProvider).selectedLayer!.opacity,
       lessThan(originalOpacity),
     );
+    expect(container.read(editorControllerProvider).canUndo, isTrue);
+  });
+
+  testWidgets('permite ocultar, bloquear, recortar y recuperar capas', (
+    tester,
+  ) async {
+    final container = await pumpEditor(tester);
+    final controller = container.read(editorControllerProvider);
+    final layerId = controller.selectedLayer!.id;
+
+    await tester.tap(find.byKey(Key('visibility-$layerId')));
+    await tester.pump();
+    expect(
+      container
+          .read(editorControllerProvider)
+          .project!
+          .layers
+          .firstWhere((layer) => layer.id == layerId)
+          .visible,
+      isFalse,
+    );
+
+    await tester.tap(find.byKey(const Key('undo')));
+    await tester.pump();
+    expect(
+      container
+          .read(editorControllerProvider)
+          .project!
+          .layers
+          .firstWhere((layer) => layer.id == layerId)
+          .visible,
+      isTrue,
+    );
+
+    await tester.tap(find.byKey(Key('lock-$layerId')));
+    await tester.pump();
+    expect(
+      container
+          .read(editorControllerProvider)
+          .project!
+          .layers
+          .firstWhere((layer) => layer.id == layerId)
+          .locked,
+      isTrue,
+    );
+    await tester.tap(find.byKey(Key('lock-$layerId')));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('crop-layer')));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byKey(const Key('crop-left')), const Offset(70, 0));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('apply-crop')));
+    await tester.pumpAndSettle();
+
+    expect(
+      container
+          .read(editorControllerProvider)
+          .project!
+          .layers
+          .firstWhere((layer) => layer.id == layerId)
+          .crop
+          .left,
+      greaterThan(0),
+    );
+    expect(find.byKey(const Key('redo')), findsOneWidget);
+  });
+
+  testWidgets('reordena capas usando los controles de profundidad', (
+    tester,
+  ) async {
+    final container = await pumpEditor(tester);
+    final selectedLayerId = container
+        .read(editorControllerProvider)
+        .selectedLayer!
+        .id;
+
+    await tester.tap(find.byKey(const Key('send-layer-back')));
+    await tester.pump();
+
+    final orderedLayers = container
+        .read(editorControllerProvider)
+        .project!
+        .orderedLayers;
+    expect(orderedLayers.first.id, selectedLayerId);
+    expect(find.byKey(const Key('bring-layer-front')), findsOneWidget);
   });
 }

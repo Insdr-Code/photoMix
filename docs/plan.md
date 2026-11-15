@@ -310,16 +310,18 @@ Actividades:
 
 Actividades:
 
-- [ ] Crear panel de capas.
-- [ ] Implementar ordenamiento de elementos.
-- [ ] Implementar visibilidad de capas.
-- [ ] Implementar bloqueo de capas.
-- [ ] Implementar recorte.
-- [ ] Implementar historial de operaciones.
-- [ ] Implementar Undo.
-- [ ] Implementar Redo.
+- [x] Crear panel de capas.
+- [x] Implementar ordenamiento de elementos.
+- [x] Implementar visibilidad de capas.
+- [x] Implementar bloqueo de capas.
+- [x] Implementar recorte.
+- [x] Implementar historial de operaciones.
+- [x] Implementar Undo.
+- [x] Implementar Redo.
 
 **Entregable:** Editor con herramientas básicas completas.
+
+**Verificación:** `flutter analyze` y `flutter test` completados correctamente.
 
 ### Fase 5. Exportación y compartir
 

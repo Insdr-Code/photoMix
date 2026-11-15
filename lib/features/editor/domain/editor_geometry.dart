@@ -26,7 +26,7 @@ abstract final class EditorGeometry {
     final localX = dx * cosine + dy * sine;
     final localY = -dx * sine + dy * cosine;
 
-    return localX.abs() <= layer.width * layer.scale / 2 &&
-        localY.abs() <= layer.height * layer.scale / 2;
+    return localX.abs() <= layer.displayWidth * layer.scale / 2 &&
+        localY.abs() <= layer.displayHeight * layer.scale / 2;
   }
 }

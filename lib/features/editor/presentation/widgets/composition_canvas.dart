@@ -13,6 +13,7 @@ class CompositionCanvas extends StatefulWidget {
     required this.onSelect,
     required this.onTransformStart,
     required this.onTransformUpdate,
+    required this.onTransformEnd,
     super.key,
   });
 
@@ -23,6 +24,7 @@ class CompositionCanvas extends StatefulWidget {
   final ValueChanged<Offset> onTransformStart;
   final void Function(Offset delta, double scale, double rotation)
   onTransformUpdate;
+  final VoidCallback onTransformEnd;
 
   @override
   State<CompositionCanvas> createState() => _CompositionCanvasState();
@@ -63,6 +65,7 @@ class _CompositionCanvasState extends State<CompositionCanvas> {
                   details.rotation,
                 );
               },
+              onScaleEnd: (_) => widget.onTransformEnd(),
               child: RepaintBoundary(
                 child: ClipRect(
                   child: CustomPaint(

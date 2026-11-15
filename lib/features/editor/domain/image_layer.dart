@@ -1,9 +1,12 @@
+import 'layer_crop.dart';
+
 class ImageLayer {
   const ImageLayer({
     required this.id,
     required this.imagePath,
     required this.width,
     required this.height,
+    this.crop = const LayerCrop(),
     this.positionX = 0.5,
     this.positionY = 0.5,
     this.scale = 1,
@@ -29,6 +32,11 @@ class ImageLayer {
   /// Dimensiones originales de la imagen en píxeles.
   final double width;
   final double height;
+  final LayerCrop crop;
+
+  double get displayWidth => width * crop.widthFactor;
+  double get displayHeight => height * crop.heightFactor;
+
   final double scale;
 
   /// Rotación en radianes.
@@ -45,6 +53,7 @@ class ImageLayer {
     double? positionY,
     double? width,
     double? height,
+    LayerCrop? crop,
     double? scale,
     double? rotation,
     double? opacity,
@@ -59,6 +68,7 @@ class ImageLayer {
       positionY: positionY ?? this.positionY,
       width: width ?? this.width,
       height: height ?? this.height,
+      crop: crop ?? this.crop,
       scale: scale ?? this.scale,
       rotation: rotation ?? this.rotation,
       opacity: opacity ?? this.opacity,
