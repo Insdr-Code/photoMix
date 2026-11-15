@@ -4,7 +4,9 @@ Aplicación móvil para crear composiciones fotográficas mediante capas, con pr
 
 ## Estado
 
-Fase 2: galería personalizada completada. Incluye permisos, álbumes, cuadrícula paginada, selección de fondo y capas, importación desde archivos y copia de recursos al almacenamiento privado.
+Fase 3: motor de composición completado. El editor conserva las dimensiones originales del fondo y permite seleccionar capas, moverlas, escalarlas, rotarlas, ajustar opacidad, duplicarlas y eliminarlas. Las posiciones se almacenan con coordenadas normalizadas.
+
+Fases anteriores: galería con permisos, álbumes, cuadrícula paginada, selección múltiple, importación de archivos y almacenamiento privado.
 
 El plan completo está en [`docs/plan.md`](docs/plan.md).
 

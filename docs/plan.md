@@ -1,7 +1,7 @@
 # PhotoMix — Plan de desarrollo
 
 **Versión:** 1.0  
-**Estado:** En desarrollo — Fase 2 completada  
+**Estado:** En desarrollo — Fase 3 completada  
 **Plataformas:** Android / iOS  
 **Framework:** Flutter  
 **Lenguaje:** Dart  
@@ -52,16 +52,16 @@ Desarrollar una aplicación móvil intuitiva que permita editar y combinar fotog
 
 ### 3.2. Editor de imágenes
 
-- [ ] Crear un lienzo a partir de una fotografía.
-- [ ] Mantener las dimensiones y proporciones originales.
-- [ ] Agregar múltiples imágenes al lienzo.
-- [ ] Seleccionar elementos mediante interacción táctil.
-- [ ] Mover imágenes mediante arrastre.
-- [ ] Redimensionar mediante gestos multitáctiles.
-- [ ] Rotar imágenes.
-- [ ] Ajustar la opacidad.
-- [ ] Duplicar elementos.
-- [ ] Eliminar elementos.
+- [x] Crear un lienzo a partir de una fotografía.
+- [x] Mantener las dimensiones y proporciones originales.
+- [x] Agregar múltiples imágenes al lienzo.
+- [x] Seleccionar elementos mediante interacción táctil.
+- [x] Mover imágenes mediante arrastre.
+- [x] Redimensionar mediante gestos multitáctiles.
+- [x] Rotar imágenes.
+- [x] Ajustar la opacidad.
+- [x] Duplicar elementos.
+- [x] Eliminar elementos.
 - [ ] Bloquear y desbloquear elementos.
 - [ ] Ocultar y mostrar capas.
 - [ ] Deshacer operaciones.
@@ -81,7 +81,7 @@ Desarrollar una aplicación móvil intuitiva que permita editar y combinar fotog
 
 ### 3.4. Procesamiento de imágenes
 
-- [ ] Detectar dimensiones originales.
+- [x] Detectar dimensiones originales.
 - [ ] Gestionar imágenes PNG con transparencia.
 - [ ] Procesar imágenes JPG.
 - [ ] Recortar imágenes.
@@ -288,19 +288,21 @@ Actividades:
 
 Actividades:
 
-- [ ] Crear modelo ImageLayer.
-- [ ] Crear modelo EditorProject.
-- [ ] Implementar lienzo.
-- [ ] Implementar renderizado del fondo.
-- [ ] Implementar renderizado de múltiples capas.
-- [ ] Implementar transformación de elementos.
-- [ ] Implementar selección de capas.
-- [ ] Implementar control de posición.
-- [ ] Implementar escala y rotación.
-- [ ] Implementar opacidad.
-- [ ] Implementar duplicación y eliminación.
+- [x] Crear modelo ImageLayer.
+- [x] Crear modelo EditorProject.
+- [x] Implementar lienzo.
+- [x] Implementar renderizado del fondo.
+- [x] Implementar renderizado de múltiples capas.
+- [x] Implementar transformación de elementos.
+- [x] Implementar selección de capas.
+- [x] Implementar control de posición.
+- [x] Implementar escala y rotación.
+- [x] Implementar opacidad.
+- [x] Implementar duplicación y eliminación.
 
 **Entregable:** Editor funcional con composición de múltiples imágenes.
+
+**Verificación:** `flutter analyze`, `flutter test` (21 pruebas), `flutter build apk --debug` y `flutter build ios --debug --no-codesign` completados correctamente.
 
 ### Fase 4. Herramientas de edición
 
