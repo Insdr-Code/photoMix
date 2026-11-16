@@ -6,6 +6,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PhotoMix necesita acceso a tus fotografías para crear composiciones.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>PhotoMix necesita guardar las composiciones en tu fototeca.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

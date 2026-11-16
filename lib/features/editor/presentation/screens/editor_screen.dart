@@ -7,6 +7,7 @@ import '../../application/editor_controller.dart';
 import '../../application/editor_providers.dart';
 import '../../application/editor_state.dart';
 import '../widgets/composition_canvas.dart';
+import '../widgets/export_options_dialog.dart';
 import '../widgets/layer_tools.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,8 @@ class EditorScreen extends ConsumerStatefulWidget {
 }
 
 class _EditorScreenState extends ConsumerState<EditorScreen> {
+  bool _isExporting = false;
+
   @override
   void initState() {
     super.initState();
@@ -37,18 +40,89 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final project = state.project;
 
     return Scaffold(
-      appBar: AppBar(title: Text(project?.name ?? 'Nueva composición')),
-      body: switch (state.status) {
-        EditorStatus.initial || EditorStatus.loading => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        EditorStatus.failure => _EditorError(onRetry: _load),
-        EditorStatus.ready => _EditorContent(
-          state: state,
-          controller: ref.read(editorControllerProvider.notifier),
-        ),
-      },
+      appBar: AppBar(
+        title: Text(project?.name ?? 'Nueva composición'),
+        actions: [
+          if (state.status == EditorStatus.ready)
+            IconButton(
+              key: const Key('export-composition'),
+              onPressed: _isExporting ? null : _showExportOptions,
+              tooltip: 'Exportar composición',
+              icon: const Icon(Icons.ios_share_outlined),
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_isExporting) const LinearProgressIndicator(),
+          Expanded(
+            child: switch (state.status) {
+              EditorStatus.initial || EditorStatus.loading => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              EditorStatus.failure => _EditorError(onRetry: _load),
+              EditorStatus.ready => _EditorContent(
+                state: state,
+                controller: ref.read(editorControllerProvider.notifier),
+              ),
+            },
+          ),
+        ],
+      ),
     );
+  }
+
+  Future<void> _showExportOptions() async {
+    final request = await showDialog<ExportRequest>(
+      context: context,
+      builder: (context) => const ExportOptionsDialog(),
+    );
+    if (request == null || !mounted) return;
+
+    final project = ref.read(editorControllerProvider).project;
+    if (project == null) return;
+    final size = MediaQuery.sizeOf(context);
+    final sharePositionOrigin = Rect.fromLTWH(0, 0, size.width, size.height);
+
+    setState(() => _isExporting = true);
+    try {
+      final exportService = ref.read(editorExportServiceProvider);
+      final file = await exportService.render(
+        project: project,
+        format: request.format,
+        quality: request.quality,
+      );
+      if (request.action == ExportAction.save) {
+        await exportService.saveToGallery(
+          file,
+          filename: 'PhotoMix_${project.id}.${request.format.extension}',
+        );
+      } else {
+        await exportService.share(
+          file,
+          sharePositionOrigin: sharePositionOrigin,
+        );
+      }
+
+      if (mounted) {
+        final message = request.action == ExportAction.save
+            ? 'Composición guardada en la galería.'
+            : 'Abriendo opciones para compartir.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Error al exportar la composición: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo exportar la composición: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 }
 

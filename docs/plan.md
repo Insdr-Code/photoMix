@@ -329,16 +329,25 @@ Actividades:
 
 Actividades:
 
-- [ ] Implementar motor de renderizado independiente.
-- [ ] Renderizar imágenes con resolución original.
-- [ ] Implementar exportación PNG.
-- [ ] Implementar exportación JPG.
-- [ ] Implementar configuración de calidad.
-- [ ] Guardar imágenes en la galería.
-- [ ] Implementar compartir con otras aplicaciones.
-- [ ] Validar resultados en Android e iOS.
+- [x] Implementar motor de renderizado independiente.
+- [x] Renderizar imágenes con resolución original.
+- [x] Implementar exportación PNG.
+- [x] Implementar exportación JPG.
+- [x] Implementar configuración de calidad.
+- [x] Guardar imágenes en la galería.
+- [x] Implementar compartir con otras aplicaciones.
+- [ ] Validar resultados en Android e iOS (Android compilado; iOS pendiente).
 
 **Entregable:** Exportación y distribución de composiciones.
+
+**Avance:** Renderer aislado de la UI, selector de formato/calidad, guardado en
+la fototeca y menú nativo para compartir implementados.
+
+**Verificación:** `flutter analyze`, `flutter test` y
+`flutter build apk --debug` completados correctamente. La compilación
+`flutter build ios --debug --no-codesign` está bloqueada porque el paquete
+Swift generado de plugins declara iOS 13, pero `file-picker-darwin` requiere
+iOS 14.
 
 ### Fase 6. Persistencia de proyectos
 

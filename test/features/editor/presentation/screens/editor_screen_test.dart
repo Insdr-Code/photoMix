@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photmix_app/core/theme/app_theme.dart';
 import 'package:photmix_app/features/editor/application/editor_providers.dart';
+import 'package:photmix_app/features/editor/domain/export_format.dart';
 import 'package:photmix_app/features/editor/presentation/screens/editor_screen.dart';
 import 'package:photmix_app/features/gallery/domain/gallery_models.dart';
 
+import '../../../../support/editor_export_fakes.dart';
 import '../../../../support/editor_fakes.dart';
 
 void main() {
@@ -15,11 +17,16 @@ void main() {
     additionalImagePaths: ['layer.jpg', 'second.png'],
   );
 
-  Future<ProviderContainer> pumpEditor(WidgetTester tester) async {
+  Future<ProviderContainer> pumpEditor(
+    WidgetTester tester, {
+    FakeEditorExportService? exportService,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           editorImageLoaderProvider.overrideWithValue(FakeEditorImageLoader()),
+          if (exportService != null)
+            editorExportServiceProvider.overrideWithValue(exportService),
         ],
         child: MaterialApp(
           theme: AppTheme.light,
@@ -192,5 +199,58 @@ void main() {
         .orderedLayers;
     expect(orderedLayers.first.id, selectedLayerId);
     expect(find.byKey(const Key('bring-layer-front')), findsOneWidget);
+  });
+
+  testWidgets('exporta JPG con calidad configurable a la galería', (
+    tester,
+  ) async {
+    final exportService = FakeEditorExportService();
+    await pumpEditor(tester, exportService: exportService);
+
+    await tester.tap(find.byKey(const Key('export-composition')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('JPG'));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('export-quality')),
+      const Offset(45, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('save-export')));
+    await tester.pumpAndSettle();
+
+    expect(exportService.renders, hasLength(1));
+    expect(exportService.renders.single.format, ExportFormat.jpg);
+    expect(exportService.renders.single.quality, isNot(90));
+    expect(exportService.savedFiles, hasLength(1));
+    expect(exportService.savedFiles.single.filename, 'PhotoMix_project.jpg');
+    expect(find.text('Composición guardada en la galería.'), findsOneWidget);
+  });
+
+  testWidgets('exporta PNG para compartir', (tester) async {
+    final exportService = FakeEditorExportService();
+    await pumpEditor(tester, exportService: exportService);
+
+    await tester.tap(find.byKey(const Key('export-composition')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('share-export')));
+    await tester.pumpAndSettle();
+
+    expect(exportService.renders.single.format, ExportFormat.png);
+    expect(exportService.sharedFiles, hasLength(1));
+    expect(exportService.sharedFiles.single.origin.isEmpty, isFalse);
+    expect(find.text('Abriendo opciones para compartir.'), findsOneWidget);
+  });
+
+  testWidgets('comunica los errores de exportación', (tester) async {
+    final exportService = FakeEditorExportService()
+      ..failure = StateError('permission denied');
+    await pumpEditor(tester, exportService: exportService);
+
+    await tester.tap(find.byKey(const Key('export-composition')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('save-export')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No se pudo exportar'), findsOneWidget);
   });
 }
