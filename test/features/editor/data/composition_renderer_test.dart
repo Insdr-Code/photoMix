@@ -164,6 +164,33 @@ void main() {
       throwsRangeError,
     );
   });
+
+  test('conserva la resolución 4K al renderizar una composición', () async {
+    const width = 3840;
+    const height = 2160;
+    final backgroundPath = await writeImage(
+      directory,
+      '4k-background.png',
+      img.Image(width: width, height: height, numChannels: 3),
+    );
+    final outputPath = '${directory.path}/4k-result.png';
+
+    await renderer.render(
+      project: projectWithBackground(
+        backgroundPath,
+        const [],
+        width: width,
+        height: height,
+      ),
+      format: ExportFormat.png,
+      quality: 90,
+      outputPath: outputPath,
+    );
+
+    final output = img.decodeImage(await File(outputPath).readAsBytes())!;
+    expect(output.width, width);
+    expect(output.height, height);
+  });
 }
 
 EditorProject projectWithBackground(

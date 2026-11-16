@@ -74,5 +74,51 @@ void main() {
     await tester.tap(find.text('Abrir configuración'));
     await tester.pump();
     expect(repository.openSettingsCalls, 1);
+
+    repository.hasAccess = true;
+    await tester.tap(find.text('Permitir acceso'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GridView), findsOneWidget);
+  });
+
+  testWidgets('adapta las columnas de la galería al ancho disponible', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          galleryRepositoryProvider.overrideWithValue(FakeGalleryRepository()),
+          imageFileStorageProvider.overrideWithValue(FakeImageFileStorage()),
+          imageFilePickerProvider.overrideWithValue(FakeImageFilePicker()),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          initialRoute: AppRoutes.gallery,
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    GridView grid = tester.widget(find.byType(GridView));
+    expect(
+      (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      3,
+    );
+
+    tester.view.physicalSize = const Size(800, 1024);
+    await tester.pumpAndSettle();
+    grid = tester.widget(find.byType(GridView));
+    expect(
+      (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+          .crossAxisCount,
+      5,
+    );
   });
 }

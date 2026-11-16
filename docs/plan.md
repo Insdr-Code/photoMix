@@ -416,18 +416,32 @@ integración se ejecutó con `flutter test -d emulator-5554` y
 
 Actividades:
 
-- [ ] Pruebas unitarias.
-- [ ] Pruebas de widgets.
-- [ ] Pruebas de integración.
-- [ ] Pruebas de permisos.
-- [ ] Pruebas de imágenes de alta resolución.
-- [ ] Pruebas de exportación.
-- [ ] Pruebas de consumo de memoria.
-- [ ] Pruebas en diferentes tamaños de pantalla.
-- [ ] Pruebas en Android.
+- [x] Pruebas unitarias.
+- [x] Pruebas de widgets.
+- [x] Pruebas de integración.
+- [x] Pruebas de permisos.
+- [x] Pruebas de imágenes de alta resolución.
+- [x] Pruebas de exportación.
+- [x] Pruebas de consumo de memoria.
+- [x] Pruebas en diferentes tamaños de pantalla.
+- [x] Pruebas en Android.
 - [ ] Pruebas en iOS.
 - [ ] Corrección de errores.
 - [ ] Preparación de versiones de distribución.
+
+**Avance:** La suite automatizada contiene 46 pruebas unitarias y de widgets.
+En Android se validaron la segmentación TFLite y la exportación PNG a 4K en
+el emulador; esta última también funciona como prueba de estrés de memoria y
+comprueba que se conserva la resolución. Las pruebas de interfaz cubren el
+rechazo y reintento de permisos, así como la cuadrícula en tamaños de 390 y
+800 píxeles. `flutter analyze` no reporta problemas.
+
+**Distribución:** `flutter build apk --release` genera el APK correctamente,
+pero la configuración actual lo firma con la clave debug; no es un artefacto
+listo para publicar. La compilación iOS de simulador quedó bloqueada durante
+ocho minutos en `pod install` y se detuvo. `tflite_flutter` tampoco soporta
+Swift Package Manager. Faltan la validación iOS y la configuración de firma y
+versionado de distribución antes de declarar PhotoMix 1.0 estable.
 
 **Entregable:** PhotoMix 1.0 estable.
 
