@@ -17,6 +17,8 @@ class EditorState {
     this.canRedo = false,
     this.errorMessage,
     this.persistenceError,
+    this.isRemovingBackground = false,
+    this.backgroundRemovalError,
   });
 
   final EditorStatus status;
@@ -27,6 +29,8 @@ class EditorState {
   final bool canRedo;
   final String? errorMessage;
   final String? persistenceError;
+  final bool isRemovingBackground;
+  final String? backgroundRemovalError;
 
   ImageLayer? get selectedLayer {
     final layers = project?.layers;
@@ -46,6 +50,8 @@ class EditorState {
     bool? canRedo,
     Object? errorMessage = _unchanged,
     Object? persistenceError = _unchanged,
+    bool? isRemovingBackground,
+    Object? backgroundRemovalError = _unchanged,
   }) {
     return EditorState(
       status: status ?? this.status,
@@ -64,6 +70,10 @@ class EditorState {
       persistenceError: identical(persistenceError, _unchanged)
           ? this.persistenceError
           : persistenceError as String?,
+      isRemovingBackground: isRemovingBackground ?? this.isRemovingBackground,
+      backgroundRemovalError: identical(backgroundRemovalError, _unchanged)
+          ? this.backgroundRemovalError
+          : backgroundRemovalError as String?,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:photmix_app/core/services/image_file_storage_provider.dart';
 import 'package:photmix_app/features/editor/application/editor_providers.dart';
 import 'package:photmix_app/features/editor/application/editor_state.dart';
 import 'package:photmix_app/features/editor/domain/layer_crop.dart';
@@ -7,6 +8,8 @@ import 'package:photmix_app/features/gallery/domain/gallery_models.dart';
 
 import '../../../support/editor_fakes.dart';
 import '../../../support/editor_project_fakes.dart';
+import '../../../support/background_removal_fakes.dart';
+import '../../../support/gallery_fakes.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -20,16 +23,24 @@ void main() {
   group('EditorController', () {
     late FakeEditorImageLoader loader;
     late FakeEditorProjectRepository projectRepository;
+    late FakeBackgroundRemovalService backgroundRemovalService;
+    late FakeImageFileStorage imageFileStorage;
     late ProviderContainer container;
     late ProviderSubscription<EditorState> subscription;
 
     setUp(() {
       loader = FakeEditorImageLoader();
       projectRepository = FakeEditorProjectRepository();
+      backgroundRemovalService = FakeBackgroundRemovalService();
+      imageFileStorage = FakeImageFileStorage();
       container = ProviderContainer(
         overrides: [
           editorImageLoaderProvider.overrideWithValue(loader),
           editorProjectRepositoryProvider.overrideWithValue(projectRepository),
+          backgroundRemovalServiceProvider.overrideWithValue(
+            backgroundRemovalService,
+          ),
+          imageFileStorageProvider.overrideWithValue(imageFileStorage),
         ],
       );
       subscription = container.listen<EditorState>(
@@ -77,6 +88,65 @@ void main() {
         container.read(editorControllerProvider).project?.layers,
         hasLength(2),
       );
+    });
+
+    test(
+      'reemplaza la capa con el PNG transparente y permite deshacer',
+      () async {
+        await loadEditor();
+        final controller = container.read(editorControllerProvider.notifier);
+        final originalPath = container
+            .read(editorControllerProvider)
+            .selectedLayer!
+            .imagePath;
+
+        await controller.removeBackgroundSelected();
+        await controller.flushPendingSaves();
+
+        var state = container.read(editorControllerProvider);
+        expect(backgroundRemovalService.sourcePaths, [originalPath]);
+        expect(imageFileStorage.processedPaths, [
+          '/private/project/background_removed.png',
+        ]);
+        expect(
+          state.selectedLayer?.imagePath,
+          imageFileStorage.processedPaths[0],
+        );
+        expect(state.images, contains(imageFileStorage.processedPaths[0]));
+        expect(state.canUndo, isTrue);
+        expect(state.isRemovingBackground, isFalse);
+        expect(
+          projectRepository.projects['project']?.layers.last.imagePath,
+          imageFileStorage.processedPaths[0],
+        );
+
+        controller.undo();
+        state = container.read(editorControllerProvider);
+        expect(state.selectedLayer?.imagePath, originalPath);
+
+        controller.redo();
+        expect(
+          container.read(editorControllerProvider).selectedLayer?.imagePath,
+          imageFileStorage.processedPaths[0],
+        );
+      },
+    );
+
+    test('comunica un error de segmentación sin cambiar la capa', () async {
+      await loadEditor();
+      final controller = container.read(editorControllerProvider.notifier);
+      final originalPath = container
+          .read(editorControllerProvider)
+          .selectedLayer!
+          .imagePath;
+      backgroundRemovalService.failure = StateError('model unavailable');
+
+      await controller.removeBackgroundSelected();
+
+      final state = container.read(editorControllerProvider);
+      expect(state.selectedLayer?.imagePath, originalPath);
+      expect(state.isRemovingBackground, isFalse);
+      expect(state.backgroundRemovalError, isNotNull);
     });
 
     test('transforma usando una sola referencia inicial del gesto', () async {

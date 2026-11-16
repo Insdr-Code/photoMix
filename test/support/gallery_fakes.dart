@@ -81,6 +81,7 @@ class FakeImageFilePicker implements ImageFilePicker {
 class FakeImageFileStorage implements ImageFileStorage {
   String? projectId;
   List<String> sourcePaths = const [];
+  final processedPaths = <String>[];
   final deletedProjectIds = <String>[];
 
   @override
@@ -94,6 +95,16 @@ class FakeImageFileStorage implements ImageFileStorage {
       for (var index = 0; index < images.length; index++)
         '/private/$projectId/${index.toString().padLeft(3, '0')}_${images[index].uri.pathSegments.last}',
     ];
+  }
+
+  @override
+  Future<String> storeProcessedImage({
+    required String projectId,
+    required Uint8List pngBytes,
+  }) async {
+    final path = '/private/$projectId/background_removed.png';
+    processedPaths.add(path);
+    return path;
   }
 
   @override

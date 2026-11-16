@@ -52,6 +52,19 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         title: Text(project?.name ?? 'Nueva composición'),
         actions: [
           if (state.status == EditorStatus.ready)
+            if (state.selectedLayer != null)
+              IconButton(
+                key: const Key('remove-background'),
+                onPressed:
+                    state.isRemovingBackground || state.selectedLayer!.locked
+                    ? null
+                    : ref
+                          .read(editorControllerProvider.notifier)
+                          .removeBackgroundSelected,
+                tooltip: 'Eliminar fondo de la capa',
+                icon: const Icon(Icons.person_remove_alt_1_outlined),
+              ),
+          if (state.status == EditorStatus.ready)
             IconButton(
               key: const Key('export-composition'),
               onPressed: _isExporting ? null : _showExportOptions,
@@ -62,7 +75,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       ),
       body: Column(
         children: [
-          if (_isExporting) const LinearProgressIndicator(),
+          if (_isExporting || state.isRemovingBackground)
+            const LinearProgressIndicator(),
+          if (state.backgroundRemovalError != null)
+            MaterialBanner(
+              content: Text(state.backgroundRemovalError!),
+              leading: const Icon(Icons.person_remove_alt_1_outlined),
+              actions: [
+                TextButton(
+                  onPressed: ref
+                      .read(editorControllerProvider.notifier)
+                      .dismissBackgroundRemovalError,
+                  child: const Text('Cerrar'),
+                ),
+              ],
+            ),
           if (state.persistenceError != null)
             MaterialBanner(
               content: Text(state.persistenceError!),

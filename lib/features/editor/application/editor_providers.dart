@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/tflite_background_removal_service.dart';
+import '../data/tflite_person_segmentation_model.dart';
 import '../data/sqflite_editor_project_repository.dart';
 import '../data/file_editor_image_loader.dart';
 import '../data/photo_mix_export_service.dart';
+import '../domain/background_removal_service.dart';
 import '../domain/editor_export_service.dart';
 import '../domain/editor_image_loader.dart';
 import '../domain/editor_project.dart';
@@ -17,6 +20,15 @@ final editorImageLoaderProvider = Provider.autoDispose<EditorImageLoader>(
 final editorExportServiceProvider = Provider<EditorExportService>(
   (ref) => PhotoMixExportService(),
 );
+
+final backgroundRemovalServiceProvider = Provider<BackgroundRemovalService>((
+  ref,
+) {
+  final model = TflitePersonSegmentationModel();
+  final service = TfliteBackgroundRemovalService(model);
+  ref.onDispose(() => model.dispose());
+  return service;
+});
 
 final editorProjectRepositoryProvider = Provider<EditorProjectRepository>(
   (ref) => SqfliteEditorProjectRepository(),

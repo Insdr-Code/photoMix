@@ -380,16 +380,35 @@ junto con sus recursos.
 
 Actividades:
 
-- [ ] Evaluar modelo de segmentación.
-- [ ] Integrar TensorFlow Lite.
-- [ ] Implementar procesamiento local.
-- [ ] Generar máscaras.
-- [ ] Aplicar transparencia.
-- [ ] Generar PNG sin fondo.
-- [ ] Incorporar resultado al editor.
-- [ ] Optimizar consumo de memoria.
+- [x] Evaluar modelo de segmentación.
+- [x] Integrar TensorFlow Lite.
+- [x] Implementar procesamiento local.
+- [x] Generar máscaras.
+- [x] Aplicar transparencia.
+- [x] Generar PNG sin fondo.
+- [x] Incorporar resultado al editor.
+- [x] Optimizar consumo de memoria.
 
 **Entregable:** Herramienta de eliminación de fondos.
+
+**Avance:** El editor elimina el fondo de la capa seleccionada con el modelo
+MediaPipe DeepLab v3 incluido en el dispositivo. El resultado PNG conserva la
+resolución original, se guarda dentro del proyecto y admite deshacer/rehacer.
+La decodificación, el escalado, el suavizado de la máscara y la codificación
+PNG se ejecutan fuera del hilo de UI.
+
+**Compatibilidad:** Android requiere API 26 por el runtime TFLite elegido.
+La compilación iOS no se verificó: `flutter build ios --debug --no-codesign`
+quedó esperando en `pod install` y se detuvo tras ocho minutos. El proyecto
+usa CocoaPods para el plugin TFLite.
+
+**Modelo:** La fuente y el SHA-256 del archivo incluido están documentados en
+[assets/models/README.md](../assets/models/README.md).
+
+**Verificación:** `flutter test` (44 pruebas), `flutter analyze` y
+`flutter build apk --debug` completados correctamente. La prueba de
+integración se ejecutó con `flutter test -d emulator-5554` y
+`integration_test/tflite_person_segmentation_test.dart`.
 
 ### Fase 8. Pruebas y estabilización
 

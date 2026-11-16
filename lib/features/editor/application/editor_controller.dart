@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/services/image_file_storage_provider.dart';
 import '../../gallery/domain/gallery_models.dart';
 import '../domain/editor_geometry.dart';
 import '../domain/editor_project.dart';
@@ -134,6 +135,75 @@ class EditorController extends Notifier<EditorState> {
         message: 'No pudimos recuperar el proyecto seleccionado.',
       );
     }
+  }
+
+  Future<void> removeBackgroundSelected() async {
+    final project = state.project;
+    final layer = state.selectedLayer;
+    if (project == null ||
+        layer == null ||
+        layer.locked ||
+        state.isRemovingBackground) {
+      return;
+    }
+
+    state = state.copyWith(
+      isRemovingBackground: true,
+      backgroundRemovalError: null,
+    );
+    try {
+      final pngBytes = await ref
+          .read(backgroundRemovalServiceProvider)
+          .removeBackground(layer.imagePath);
+      if (_disposed || state.project?.id != project.id) return;
+
+      final processedPath = await ref
+          .read(imageFileStorageProvider)
+          .storeProcessedImage(projectId: project.id, pngBytes: pngBytes);
+      if (_disposed || state.project?.id != project.id) return;
+
+      final processedImage = await ref
+          .read(editorImageLoaderProvider)
+          .loadImage(processedPath);
+      if (_disposed || state.project?.id != project.id) {
+        processedImage.dispose();
+        return;
+      }
+
+      final currentLayer = _findLayer(layer.id);
+      if (currentLayer == null) {
+        processedImage.dispose();
+        return;
+      }
+
+      _loadedImages[processedPath] = processedImage;
+      state = state.copyWith(images: Map.unmodifiable(_loadedImages));
+      _replaceLayerWithHistory(
+        currentLayer.copyWith(
+          imagePath: processedPath,
+          width: processedImage.width.toDouble(),
+          height: processedImage.height.toDouble(),
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Error al eliminar el fondo: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!_disposed && state.project?.id == project.id) {
+        state = state.copyWith(
+          backgroundRemovalError:
+              'No se pudo eliminar el fondo de la capa. '
+              'Inténtalo de nuevo.',
+        );
+      }
+    } finally {
+      if (!_disposed && state.project?.id == project.id) {
+        state = state.copyWith(isRemovingBackground: false);
+      }
+    }
+  }
+
+  void dismissBackgroundRemovalError() {
+    state = state.copyWith(backgroundRemovalError: null);
   }
 
   bool _beginLoading() {

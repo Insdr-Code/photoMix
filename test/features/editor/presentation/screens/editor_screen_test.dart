@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photmix_app/core/theme/app_theme.dart';
+import 'package:photmix_app/core/services/image_file_storage_provider.dart';
 import 'package:photmix_app/features/editor/application/editor_providers.dart';
 import 'package:photmix_app/features/editor/domain/export_format.dart';
 import 'package:photmix_app/features/editor/presentation/screens/editor_screen.dart';
@@ -10,6 +11,8 @@ import 'package:photmix_app/features/gallery/domain/gallery_models.dart';
 import '../../../../support/editor_export_fakes.dart';
 import '../../../../support/editor_fakes.dart';
 import '../../../../support/editor_project_fakes.dart';
+import '../../../../support/background_removal_fakes.dart';
+import '../../../../support/gallery_fakes.dart';
 
 void main() {
   const selection = PhotoSelection(
@@ -22,11 +25,19 @@ void main() {
     WidgetTester tester, {
     FakeEditorExportService? exportService,
     FakeEditorProjectRepository? projectRepository,
+    FakeBackgroundRemovalService? backgroundRemovalService,
+    FakeImageFileStorage? imageFileStorage,
   }) async {
+    final backgroundService =
+        backgroundRemovalService ?? FakeBackgroundRemovalService();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           editorImageLoaderProvider.overrideWithValue(FakeEditorImageLoader()),
+          backgroundRemovalServiceProvider.overrideWithValue(backgroundService),
+          imageFileStorageProvider.overrideWithValue(
+            imageFileStorage ?? FakeImageFileStorage(),
+          ),
           if (exportService != null)
             editorExportServiceProvider.overrideWithValue(exportService),
           editorProjectRepositoryProvider.overrideWithValue(
@@ -65,6 +76,31 @@ void main() {
       hasLength(2),
     );
     expect(find.text('Capa 2'), findsWidgets);
+  });
+
+  testWidgets('permite eliminar el fondo de la capa seleccionada', (
+    tester,
+  ) async {
+    final backgroundRemovalService = FakeBackgroundRemovalService();
+    final imageFileStorage = FakeImageFileStorage();
+    final container = await pumpEditor(
+      tester,
+      backgroundRemovalService: backgroundRemovalService,
+      imageFileStorage: imageFileStorage,
+    );
+    final originalPath = container
+        .read(editorControllerProvider)
+        .selectedLayer!
+        .imagePath;
+
+    await tester.tap(find.byKey(const Key('remove-background')));
+    await tester.pumpAndSettle();
+
+    expect(backgroundRemovalService.sourcePaths, [originalPath]);
+    expect(
+      container.read(editorControllerProvider).selectedLayer?.imagePath,
+      imageFileStorage.processedPaths.single,
+    );
   });
 
   testWidgets('selecciona, deselecciona y mueve capas mediante gestos', (
