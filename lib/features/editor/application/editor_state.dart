@@ -16,6 +16,7 @@ class EditorState {
     this.canUndo = false,
     this.canRedo = false,
     this.errorMessage,
+    this.persistenceError,
   });
 
   final EditorStatus status;
@@ -25,6 +26,7 @@ class EditorState {
   final bool canUndo;
   final bool canRedo;
   final String? errorMessage;
+  final String? persistenceError;
 
   ImageLayer? get selectedLayer {
     final layers = project?.layers;
@@ -43,6 +45,7 @@ class EditorState {
     bool? canUndo,
     bool? canRedo,
     Object? errorMessage = _unchanged,
+    Object? persistenceError = _unchanged,
   }) {
     return EditorState(
       status: status ?? this.status,
@@ -58,6 +61,9 @@ class EditorState {
       errorMessage: identical(errorMessage, _unchanged)
           ? this.errorMessage
           : errorMessage as String?,
+      persistenceError: identical(persistenceError, _unchanged)
+          ? this.persistenceError
+          : persistenceError as String?,
     );
   }
 }

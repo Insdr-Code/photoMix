@@ -11,9 +11,11 @@ import '../widgets/export_options_dialog.dart';
 import '../widgets/layer_tools.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
-  const EditorScreen({required this.selection, super.key});
+  const EditorScreen({this.selection, this.projectId, super.key})
+    : assert((selection == null) != (projectId == null));
 
-  final PhotoSelection selection;
+  final PhotoSelection? selection;
+  final String? projectId;
 
   @override
   ConsumerState<EditorScreen> createState() => _EditorScreenState();
@@ -30,7 +32,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   void _load() {
     if (mounted) {
-      ref.read(editorControllerProvider.notifier).load(widget.selection);
+      final controller = ref.read(editorControllerProvider.notifier);
+      final selection = widget.selection;
+      if (selection != null) {
+        controller.load(selection);
+      } else {
+        controller.loadProject(widget.projectId!);
+      }
     }
   }
 
@@ -55,6 +63,19 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       body: Column(
         children: [
           if (_isExporting) const LinearProgressIndicator(),
+          if (state.persistenceError != null)
+            MaterialBanner(
+              content: Text(state.persistenceError!),
+              leading: const Icon(Icons.cloud_off_outlined),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    ref.read(editorControllerProvider.notifier).retrySave();
+                  },
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
           Expanded(
             child: switch (state.status) {
               EditorStatus.initial || EditorStatus.loading => const Center(

@@ -8,6 +8,8 @@ abstract interface class ImageFileStorage {
     required String projectId,
     required List<File> images,
   });
+
+  Future<void> deleteProjectImages(String projectId);
 }
 
 class LocalImageFileStorage implements ImageFileStorage {
@@ -33,5 +35,24 @@ class LocalImageFileStorage implements ImageFileStorage {
       storedPaths.add(storedImage.path);
     }
     return storedPaths;
+  }
+
+  @override
+  Future<void> deleteProjectImages(String projectId) async {
+    final documents = await getApplicationDocumentsDirectory();
+    final root = p.normalize(p.join(documents.path, 'PhotoMix', 'projects'));
+    if (projectId.isEmpty || p.basename(projectId) != projectId) {
+      throw ArgumentError.value(projectId, 'projectId');
+    }
+
+    final projectDirectory = p.normalize(p.join(root, projectId));
+    if (!p.isWithin(root, projectDirectory)) {
+      throw ArgumentError.value(projectId, 'projectId');
+    }
+
+    final directory = Directory(projectDirectory);
+    if (await directory.exists()) {
+      await directory.delete(recursive: true);
+    }
   }
 }

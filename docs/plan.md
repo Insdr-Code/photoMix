@@ -355,17 +355,24 @@ iOS 14.
 
 Actividades:
 
-- [ ] Configurar SQLite.
-- [ ] Crear repositorio de proyectos.
-- [ ] Implementar almacenamiento de recursos.
-- [ ] Implementar serialización JSON.
-- [ ] Guardar proyectos.
-- [ ] Recuperar proyectos.
-- [ ] Actualizar proyectos.
-- [ ] Eliminar proyectos.
-- [ ] Crear pantalla de proyectos recientes.
+- [x] Configurar SQLite.
+- [x] Crear repositorio de proyectos.
+- [x] Implementar almacenamiento de recursos.
+- [x] Implementar serialización JSON.
+- [x] Guardar proyectos.
+- [x] Recuperar proyectos.
+- [x] Actualizar proyectos.
+- [x] Eliminar proyectos.
+- [x] Crear pantalla de proyectos recientes.
 
 **Entregable:** Gestión local de proyectos editables.
+
+**Avance:** Los proyectos nuevos se guardan automáticamente; las ediciones se
+persisten en SQLite, se pueden reabrir desde Inicio o Mis proyectos y eliminar
+junto con sus recursos.
+
+**Verificación:** `flutter analyze`, `flutter test` (40 pruebas) y
+`flutter build apk --debug` completados correctamente.
 
 ### Fase 7. Eliminación de fondos
 

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -22,6 +23,7 @@ class EditorController extends Notifier<EditorState> {
   final _loadedImages = <String, Image>{};
   final _undoHistory = <_EditorSnapshot>[];
   final _redoHistory = <_EditorSnapshot>[];
+  Future<void> _saveQueue = Future<void>.value();
   ImageLayer? _transformStartLayer;
   _EditorSnapshot? _transformStartSnapshot;
   _EditorSnapshot? _opacityStartSnapshot;
@@ -34,15 +36,7 @@ class EditorController extends Notifier<EditorState> {
   }
 
   Future<void> load(PhotoSelection selection) async {
-    if (state.status == EditorStatus.loading) return;
-
-    _disposeImages();
-    _undoHistory.clear();
-    _redoHistory.clear();
-    _transformStartLayer = null;
-    _transformStartSnapshot = null;
-    _opacityStartSnapshot = null;
-    state = const EditorState(status: EditorStatus.loading);
+    if (!_beginLoading()) return;
     final paths = {
       selection.backgroundPath,
       ...selection.additionalImagePaths,
@@ -50,17 +44,7 @@ class EditorController extends Notifier<EditorState> {
 
     final loadedImages = <String, Image>{};
     try {
-      for (final path in paths) {
-        final image = await ref.read(editorImageLoaderProvider).loadImage(path);
-        if (_disposed) {
-          for (final loadedImage in loadedImages.values) {
-            loadedImage.dispose();
-          }
-          image.dispose();
-          return;
-        }
-        loadedImages[path] = image;
-      }
+      if (!await _loadImages(paths, loadedImages)) return;
 
       final background = loadedImages[selection.backgroundPath]!;
       final now = DateTime.now();
@@ -91,34 +75,128 @@ class EditorController extends Notifier<EditorState> {
         );
       }
 
-      _loadedImages.addAll(loadedImages);
-      state = EditorState(
-        status: EditorStatus.ready,
-        project: EditorProject(
-          id: selection.projectId,
-          name: 'Nueva composición',
-          backgroundPath: selection.backgroundPath,
-          canvasWidth: background.width,
-          canvasHeight: background.height,
-          layers: layers,
-          createdAt: now,
-          updatedAt: now,
-        ),
-        images: Map.unmodifiable(_loadedImages),
+      final project = EditorProject(
+        id: selection.projectId,
+        name: 'Nueva composición',
+        backgroundPath: selection.backgroundPath,
+        canvasWidth: background.width,
+        canvasHeight: background.height,
+        layers: layers,
+        createdAt: now,
+        updatedAt: now,
+      );
+      _setLoadedProject(
+        project,
+        loadedImages,
         selectedLayerId: layers.isEmpty ? null : layers.last.id,
       );
-    } catch (_) {
-      for (final image in loadedImages.values) {
-        image.dispose();
-      }
-      if (!_disposed) {
-        state = const EditorState(
-          status: EditorStatus.failure,
-          errorMessage:
-              'No pudimos abrir una de las imágenes. Vuelve a seleccionarlas.',
-        );
-      }
+      _enqueueSave(project);
+    } catch (error, stackTrace) {
+      _failLoading(
+        loadedImages,
+        error: error,
+        stackTrace: stackTrace,
+        message: 'No pudimos abrir una de las imágenes o guardar el proyecto.',
+      );
     }
+  }
+
+  Future<void> loadProject(String projectId) async {
+    if (!_beginLoading()) return;
+    final loadedImages = <String, Image>{};
+    try {
+      final project = await ref
+          .read(editorProjectRepositoryProvider)
+          .getById(projectId);
+      if (_disposed) return;
+      if (project == null) {
+        throw StateError('El proyecto ya no existe.');
+      }
+
+      final paths = {
+        project.backgroundPath,
+        ...project.layers.map((layer) => layer.imagePath),
+      }.toList(growable: false);
+      if (!await _loadImages(paths, loadedImages)) return;
+      final selectedLayerId = project.orderedLayers.isEmpty
+          ? null
+          : project.orderedLayers.last.id;
+      _setLoadedProject(
+        project,
+        loadedImages,
+        selectedLayerId: selectedLayerId,
+      );
+    } catch (error, stackTrace) {
+      _failLoading(
+        loadedImages,
+        error: error,
+        stackTrace: stackTrace,
+        message: 'No pudimos recuperar el proyecto seleccionado.',
+      );
+    }
+  }
+
+  bool _beginLoading() {
+    if (state.status == EditorStatus.loading) return false;
+    _disposeImages();
+    _undoHistory.clear();
+    _redoHistory.clear();
+    _transformStartLayer = null;
+    _transformStartSnapshot = null;
+    _opacityStartSnapshot = null;
+    state = const EditorState(status: EditorStatus.loading);
+    return true;
+  }
+
+  Future<bool> _loadImages(
+    List<String> paths,
+    Map<String, Image> loadedImages,
+  ) async {
+    for (final path in paths) {
+      final image = await ref.read(editorImageLoaderProvider).loadImage(path);
+      if (_disposed) {
+        image.dispose();
+        _disposeImagesIn(loadedImages);
+        return false;
+      }
+      loadedImages[path] = image;
+    }
+    return true;
+  }
+
+  void _setLoadedProject(
+    EditorProject project,
+    Map<String, Image> images, {
+    required String? selectedLayerId,
+  }) {
+    _loadedImages.addAll(images);
+    state = EditorState(
+      status: EditorStatus.ready,
+      project: project,
+      images: Map.unmodifiable(_loadedImages),
+      selectedLayerId: selectedLayerId,
+    );
+  }
+
+  void _failLoading(
+    Map<String, Image> images, {
+    required Object error,
+    required StackTrace stackTrace,
+    required String message,
+  }) {
+    _disposeImagesIn(images);
+    debugPrint('Error al cargar proyecto: $error');
+    debugPrintStack(stackTrace: stackTrace);
+    if (!_disposed) {
+      state = EditorState(status: EditorStatus.failure, errorMessage: message);
+    }
+  }
+
+  void _disposeImagesIn(Map<String, Image> images) {
+    for (final image in images.values) {
+      image.dispose();
+    }
+    images.clear();
   }
 
   void selectAt(Offset normalizedPoint) {
@@ -160,11 +238,12 @@ class EditorController extends Notifier<EditorState> {
       scale: (initialLayer.scale * scale).clamp(_minLayerScale, _maxLayerScale),
       rotation: initialLayer.rotation + rotation,
     );
-    _replaceLayer(updatedLayer);
+    _replaceLayer(updatedLayer, persist: false);
   }
 
   void endTransform() {
     _finishContinuousEdit(_transformStartSnapshot);
+    _persistCurrentProject();
     _transformStartLayer = null;
     _transformStartSnapshot = null;
   }
@@ -184,6 +263,7 @@ class EditorController extends Notifier<EditorState> {
 
   void endOpacityChange() {
     _finishContinuousEdit(_opacityStartSnapshot);
+    _persistCurrentProject();
     _opacityStartSnapshot = null;
   }
 
@@ -299,6 +379,10 @@ class EditorController extends Notifier<EditorState> {
     _restoreSnapshot(snapshot);
   }
 
+  Future<void> flushPendingSaves() => _saveQueue;
+
+  void retrySave() => _persistCurrentProject();
+
   void _moveSelectedToTopPosition(int topIndex) {
     final project = state.project;
     final selected = state.selectedLayer;
@@ -331,13 +415,13 @@ class EditorController extends Notifier<EditorState> {
     _replaceLayer(updatedLayer);
   }
 
-  void _replaceLayer(ImageLayer updatedLayer) {
+  void _replaceLayer(ImageLayer updatedLayer, {bool persist = true}) {
     final project = state.project;
     if (project == null) return;
     final layers = project.layers
         .map((layer) => layer.id == updatedLayer.id ? updatedLayer : layer)
         .toList(growable: false);
-    _applyProject(layers: layers);
+    _applyProject(layers: layers, persist: persist);
   }
 
   void _commitLayers({
@@ -352,6 +436,7 @@ class EditorController extends Notifier<EditorState> {
   void _applyProject({
     required List<ImageLayer> layers,
     Object? selectedLayerId = _keepSelection,
+    bool persist = true,
   }) {
     final project = state.project;
     if (project == null) return;
@@ -359,6 +444,7 @@ class EditorController extends Notifier<EditorState> {
       layers: layers,
       updatedAt: DateTime.now(),
     );
+    if (persist) _enqueueSave(updatedProject);
     final history = _historyValues();
     if (identical(selectedLayerId, _keepSelection)) {
       state = state.copyWith(
@@ -374,6 +460,36 @@ class EditorController extends Notifier<EditorState> {
         canRedo: history.$2,
       );
     }
+  }
+
+  void _persistCurrentProject() {
+    final project = state.project;
+    if (project != null) _enqueueSave(project);
+  }
+
+  void _enqueueSave(EditorProject project) {
+    final repository = ref.read(editorProjectRepositoryProvider);
+    _saveQueue = _saveQueue
+        .then((_) => repository.save(project))
+        .then((_) {
+          if (_disposed) return;
+          ref.invalidate(editorProjectsProvider);
+          if (state.project?.id == project.id &&
+              state.persistenceError != null) {
+            state = state.copyWith(persistenceError: null);
+          }
+        })
+        .catchError((Object error, StackTrace stackTrace) {
+          debugPrint('Error al guardar el proyecto: $error');
+          debugPrintStack(stackTrace: stackTrace);
+          if (!_disposed && state.project?.id == project.id) {
+            state = state.copyWith(
+              persistenceError:
+                  'No se pudieron guardar los últimos cambios. '
+                  'Comprueba el espacio disponible e inténtalo de nuevo.',
+            );
+          }
+        });
   }
 
   void _finishContinuousEdit(_EditorSnapshot? startSnapshot) {
@@ -409,6 +525,7 @@ class EditorController extends Notifier<EditorState> {
       canUndo: history.$1,
       canRedo: history.$2,
     );
+    _enqueueSave(snapshot.project);
   }
 
   _EditorSnapshot? _currentSnapshot() {

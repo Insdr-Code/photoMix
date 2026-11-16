@@ -9,6 +9,7 @@ import 'package:photmix_app/features/gallery/domain/gallery_models.dart';
 
 import '../../../../support/editor_export_fakes.dart';
 import '../../../../support/editor_fakes.dart';
+import '../../../../support/editor_project_fakes.dart';
 
 void main() {
   const selection = PhotoSelection(
@@ -20,6 +21,7 @@ void main() {
   Future<ProviderContainer> pumpEditor(
     WidgetTester tester, {
     FakeEditorExportService? exportService,
+    FakeEditorProjectRepository? projectRepository,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -27,6 +29,9 @@ void main() {
           editorImageLoaderProvider.overrideWithValue(FakeEditorImageLoader()),
           if (exportService != null)
             editorExportServiceProvider.overrideWithValue(exportService),
+          editorProjectRepositoryProvider.overrideWithValue(
+            projectRepository ?? FakeEditorProjectRepository(),
+          ),
         ],
         child: MaterialApp(
           theme: AppTheme.light,
@@ -252,5 +257,16 @@ void main() {
     await tester.tap(find.byKey(const Key('save-export')));
     await tester.pumpAndSettle();
     expect(find.textContaining('No se pudo exportar'), findsOneWidget);
+  });
+
+  testWidgets('persiste el proyecto recién creado automáticamente', (
+    tester,
+  ) async {
+    final projectRepository = FakeEditorProjectRepository();
+    await pumpEditor(tester, projectRepository: projectRepository);
+    await tester.pumpAndSettle();
+
+    expect(projectRepository.projects, contains('project'));
+    expect(projectRepository.projects['project']!.layers, hasLength(2));
   });
 }

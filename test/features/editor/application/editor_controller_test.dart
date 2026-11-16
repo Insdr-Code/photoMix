@@ -6,6 +6,7 @@ import 'package:photmix_app/features/editor/domain/layer_crop.dart';
 import 'package:photmix_app/features/gallery/domain/gallery_models.dart';
 
 import '../../../support/editor_fakes.dart';
+import '../../../support/editor_project_fakes.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -18,13 +19,18 @@ void main() {
 
   group('EditorController', () {
     late FakeEditorImageLoader loader;
+    late FakeEditorProjectRepository projectRepository;
     late ProviderContainer container;
     late ProviderSubscription<EditorState> subscription;
 
     setUp(() {
       loader = FakeEditorImageLoader();
+      projectRepository = FakeEditorProjectRepository();
       container = ProviderContainer(
-        overrides: [editorImageLoaderProvider.overrideWithValue(loader)],
+        overrides: [
+          editorImageLoaderProvider.overrideWithValue(loader),
+          editorProjectRepositoryProvider.overrideWithValue(projectRepository),
+        ],
       );
       subscription = container.listen<EditorState>(
         editorControllerProvider,
@@ -225,6 +231,57 @@ void main() {
         container.read(editorControllerProvider).selectedLayer?.positionX,
         initialLayer.positionX,
       );
+    });
+
+    test('autoguarda cambios y reabre el proyecto serializado', () async {
+      await loadEditor();
+      final controller = container.read(editorControllerProvider.notifier);
+      await controller.flushPendingSaves();
+      final original = container.read(editorControllerProvider).selectedLayer!;
+
+      controller.beginOpacityChange();
+      controller.setSelectedOpacity(0.42);
+      controller.endOpacityChange();
+      await controller.flushPendingSaves();
+
+      expect(projectRepository.projects, contains('project'));
+      expect(
+        projectRepository.projects['project']!.layers
+            .firstWhere((layer) => layer.id == original.id)
+            .opacity,
+        0.42,
+      );
+
+      await controller.loadProject('project');
+      final reopened = container.read(editorControllerProvider);
+      expect(reopened.status, EditorStatus.ready);
+      expect(reopened.project?.id, 'project');
+      expect(
+        reopened.project!.layers
+            .firstWhere((layer) => layer.id == original.id)
+            .opacity,
+        0.42,
+      );
+    });
+
+    test('muestra errores al no poder guardar cambios', () async {
+      await loadEditor();
+      final controller = container.read(editorControllerProvider.notifier);
+      await controller.flushPendingSaves();
+      projectRepository.failure = StateError('database unavailable');
+
+      controller.duplicateSelected();
+      await controller.flushPendingSaves();
+
+      expect(
+        container.read(editorControllerProvider).persistenceError,
+        isNotNull,
+      );
+
+      projectRepository.failure = null;
+      controller.retrySave();
+      await controller.flushPendingSaves();
+      expect(container.read(editorControllerProvider).persistenceError, isNull);
     });
 
     test('informa fallos de decodificación', () async {

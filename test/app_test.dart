@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photmix_app/app.dart';
 import 'package:photmix_app/core/theme/app_colors.dart';
+import 'package:photmix_app/features/editor/application/editor_providers.dart';
 import 'package:photmix_app/features/gallery/application/gallery_providers.dart';
 
 import 'support/gallery_fakes.dart';
+import 'support/editor_project_fakes.dart';
 
 void main() {
   testWidgets('aplica el tema y muestra el inicio de PhotoMix', (tester) async {
@@ -13,10 +15,14 @@ void main() {
       ProviderScope(
         overrides: [
           galleryRepositoryProvider.overrideWithValue(FakeGalleryRepository()),
+          editorProjectRepositoryProvider.overrideWithValue(
+            FakeEditorProjectRepository(),
+          ),
         ],
         child: const PhotoMixApp(),
       ),
     );
+    await tester.pumpAndSettle();
 
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
 
@@ -33,6 +39,9 @@ void main() {
       ProviderScope(
         overrides: [
           galleryRepositoryProvider.overrideWithValue(FakeGalleryRepository()),
+          editorProjectRepositoryProvider.overrideWithValue(
+            FakeEditorProjectRepository(),
+          ),
         ],
         child: const PhotoMixApp(),
       ),
