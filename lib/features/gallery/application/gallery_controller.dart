@@ -154,13 +154,12 @@ class GalleryController extends Notifier<GalleryState> {
     state = state.copyWith(
       background: null,
       additionalImages: const [],
-      importedFilePaths: const [],
       errorMessage: null,
     );
   }
 
   Future<void> importFiles() async {
-    if (state.background == null || state.isBusy) return;
+    if (state.isBusy) return;
 
     state = state.copyWith(isImporting: true, errorMessage: null);
     try {
@@ -184,7 +183,18 @@ class GalleryController extends Notifier<GalleryState> {
 
   void clearImportedFiles() {
     if (state.isBusy) return;
-    state = state.copyWith(importedFilePaths: const []);
+    final importedPaths = state.importedFilePaths.toSet();
+    state = state.copyWith(
+      importedFilePaths: const [],
+      background:
+          state.background != null &&
+              importedPaths.contains(state.background!.id)
+          ? null
+          : state.background,
+      additionalImages: state.additionalImages
+          .where((image) => !importedPaths.contains(image.id))
+          .toList(growable: false),
+    );
   }
 
   Future<PhotoSelection?> createSelection() async {
@@ -196,16 +206,18 @@ class GalleryController extends Notifier<GalleryState> {
       final repository = ref.read(galleryRepositoryProvider);
       final selectedAssets = [background, ...state.additionalImages];
       final assetFiles = await Future.wait(
-        selectedAssets.map(repository.getImageFile),
+        selectedAssets.map((image) {
+          if (state.importedFilePaths.contains(image.id)) {
+            return Future<File?>.value(File(image.id));
+          }
+          return repository.getImageFile(image);
+        }),
       );
       if (assetFiles.any((file) => file == null)) {
         throw StateError('Una imagen seleccionada no está disponible.');
       }
 
-      final images = <File>[
-        ...assetFiles.whereType<File>(),
-        ...state.importedFilePaths.map(File.new),
-      ];
+      final images = <File>[...assetFiles.whereType<File>()];
       final projectId = const Uuid().v4();
       final storedPaths = await ref
           .read(imageFileStorageProvider)

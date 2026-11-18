@@ -42,6 +42,17 @@ class GalleryState {
     return null;
   }
 
+  List<GalleryImage> get availableImages => [
+    ...images,
+    for (final path in importedFilePaths)
+      GalleryImage(
+        id: path,
+        name: Uri.file(path).pathSegments.last,
+        width: 0,
+        height: 0,
+      ),
+  ];
+
   bool get isBusy => isImporting || isSaving;
   bool get canContinue =>
       status == GalleryStatus.ready && background != null && !isBusy;

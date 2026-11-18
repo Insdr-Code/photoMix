@@ -79,10 +79,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen>
 
     final state = ref.watch(galleryControllerProvider);
     final controller = ref.read(galleryControllerProvider.notifier);
-    final canImport =
-        state.status == GalleryStatus.ready &&
-        state.background != null &&
-        !state.isBusy;
+    final canImport = state.status == GalleryStatus.ready && !state.isBusy;
 
     return Scaffold(
       appBar: AppBar(
@@ -148,7 +145,8 @@ class _GalleryContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (state.albums.isEmpty) {
+    final availableImages = state.availableImages;
+    if (state.albums.isEmpty && availableImages.isEmpty) {
       return const _EmptyMessage(
         icon: Icons.photo_library_outlined,
         title: 'No encontramos fotografías',
@@ -177,7 +175,7 @@ class _GalleryContent extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: state.images.isEmpty
+          child: availableImages.isEmpty
               ? const _EmptyMessage(
                   icon: Icons.photo_outlined,
                   title: 'Álbum vacío',
@@ -195,19 +193,23 @@ class _GalleryContent extends StatelessWidget {
                         mainAxisSpacing: 8,
                       ),
                       itemCount:
-                          state.images.length + (state.isLoadingMore ? 1 : 0),
+                          availableImages.length +
+                          (state.isLoadingMore ? 1 : 0),
                       itemBuilder: (context, index) {
-                        if (index >= state.images.length) {
+                        if (index >= availableImages.length) {
                           return const Center(
                             child: CircularProgressIndicator(strokeWidth: 2),
                           );
                         }
-                        final image = state.images[index];
+                        final image = availableImages[index];
                         final selectionIndex = state.additionalImages
                             .indexWhere((selected) => selected.id == image.id);
                         return GalleryImageTile(
                           key: Key('gallery-image-${image.id}'),
                           image: image,
+                          filePath: state.importedFilePaths.contains(image.id)
+                              ? image.id
+                              : null,
                           isBackground: state.background?.id == image.id,
                           selectionIndex: selectionIndex < 0
                               ? null
@@ -304,7 +306,7 @@ class _SelectionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final importedCount = state.importedFilePaths.length;
-    final layerCount = state.additionalImages.length + importedCount;
+    final layerCount = state.additionalImages.length;
 
     return Material(
       color: AppColors.surface,

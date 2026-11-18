@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import '../../domain/gallery_models.dart';
 class GalleryImageTile extends ConsumerStatefulWidget {
   const GalleryImageTile({
     required this.image,
+    this.filePath,
     required this.onTap,
     required this.isBackground,
     required this.selectionIndex,
@@ -17,6 +19,7 @@ class GalleryImageTile extends ConsumerStatefulWidget {
   });
 
   final GalleryImage image;
+  final String? filePath;
   final VoidCallback onTap;
   final bool isBackground;
   final int? selectionIndex;
@@ -37,12 +40,14 @@ class _GalleryImageTileState extends ConsumerState<GalleryImageTile> {
   @override
   void didUpdateWidget(covariant GalleryImageTile oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.image.id != widget.image.id) {
+    if (oldWidget.image.id != widget.image.id ||
+        oldWidget.filePath != widget.filePath) {
       _thumbnail = _loadThumbnail();
     }
   }
 
   Future<Uint8List?> _loadThumbnail() {
+    if (widget.filePath != null) return Future.value();
     return ref
         .read(galleryRepositoryProvider)
         .getThumbnail(widget.image, size: 320);
@@ -68,15 +73,17 @@ class _GalleryImageTileState extends ConsumerState<GalleryImageTile> {
                 FutureBuilder<Uint8List?>(
                   future: _thumbnail,
                   builder: (context, snapshot) {
+                    final filePath = widget.filePath;
+                    if (filePath != null) {
+                      return Image.file(
+                        File(filePath),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _imagePlaceholder(),
+                      );
+                    }
                     final bytes = snapshot.data;
                     if (bytes == null) {
-                      return const ColoredBox(
-                        color: AppColors.background,
-                        child: Icon(
-                          Icons.image_outlined,
-                          color: AppColors.textSecondary,
-                        ),
-                      );
+                      return _imagePlaceholder();
                     }
                     return Image.memory(
                       bytes,
@@ -108,6 +115,13 @@ class _GalleryImageTileState extends ConsumerState<GalleryImageTile> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _imagePlaceholder() {
+    return const ColoredBox(
+      color: AppColors.background,
+      child: Icon(Icons.image_outlined, color: AppColors.textSecondary),
     );
   }
 }

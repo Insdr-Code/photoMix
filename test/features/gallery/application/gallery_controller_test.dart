@@ -143,6 +143,11 @@ void main() {
         controller.selectImage(testImages[1]);
 
         await controller.importFiles();
+        final importedImage = container
+            .read(galleryControllerProvider)
+            .availableImages
+            .last;
+        controller.selectImage(importedImage);
         final selection = await controller.createSelection();
 
         expect(selection, isNotNull);
@@ -159,6 +164,27 @@ void main() {
         expect(container.read(galleryControllerProvider).isSaving, isFalse);
       },
     );
+
+    test('permite usar un archivo importado como fondo del proyecto', () async {
+      final picker = FakeImageFilePicker(
+        files: [File('/imports/background.png')],
+      );
+      container.dispose();
+      container = createContainer(picker: picker);
+      final controller = container.read(galleryControllerProvider.notifier);
+      await controller.load();
+      await controller.importFiles();
+      controller.selectImage(
+        container.read(galleryControllerProvider).availableImages.last,
+      );
+
+      final selection = await controller.createSelection();
+
+      expect(selection, isNotNull);
+      expect(selection!.backgroundPath, endsWith('000_background.png'));
+      expect(selection.additionalImagePaths, isEmpty);
+      expect(storage.sourcePaths, ['/imports/background.png']);
+    });
   });
 }
 

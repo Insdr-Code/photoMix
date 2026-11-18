@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +49,90 @@ void main() {
     expect(find.text('Favoritos'), findsOneWidget);
     expect(find.text('1'), findsNWidgets(2));
   });
+
+  testWidgets('permite importar archivos antes de elegir el fondo', (
+    tester,
+  ) async {
+    final picker = FakeImageFilePicker(files: [File('/imports/extra.png')]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          galleryRepositoryProvider.overrideWithValue(FakeGalleryRepository()),
+          imageFileStorageProvider.overrideWithValue(FakeImageFileStorage()),
+          imageFilePickerProvider.overrideWithValue(picker),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          initialRoute: AppRoutes.gallery,
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final importButton = find.ancestor(
+      of: find.byIcon(Icons.upload_file_outlined),
+      matching: find.byType(IconButton),
+    );
+    expect(tester.widget<IconButton>(importButton).onPressed, isNotNull);
+
+    await tester.tap(importButton);
+    await tester.pumpAndSettle();
+    final importedImage = find.byKey(
+      const Key('gallery-image-/imports/extra.png'),
+    );
+    expect(importedImage, findsOneWidget);
+
+    await tester.tap(importedImage);
+    await tester.pump();
+    expect(find.text('FONDO'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('gallery-image-background')));
+    await tester.pump();
+
+    expect(find.text('Fondo seleccionado · 1 capa'), findsOneWidget);
+  });
+
+  testWidgets(
+    'muestra y permite elegir importaciones sin fotos en la galería',
+    (tester) async {
+      final picker = FakeImageFilePicker(files: [File('/imports/only.png')]);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            galleryRepositoryProvider.overrideWithValue(
+              FakeGalleryRepository(albums: const [], imagesByAlbum: const {}),
+            ),
+            imageFileStorageProvider.overrideWithValue(FakeImageFileStorage()),
+            imageFilePickerProvider.overrideWithValue(picker),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            initialRoute: AppRoutes.gallery,
+            onGenerateRoute: AppRouter.onGenerateRoute,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.ancestor(
+          of: find.byIcon(Icons.upload_file_outlined),
+          matching: find.byType(IconButton),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final importedImage = find.byKey(
+        const Key('gallery-image-/imports/only.png'),
+      );
+      expect(importedImage, findsOneWidget);
+      await tester.tap(importedImage);
+      await tester.pump();
+
+      expect(find.text('FONDO'), findsOneWidget);
+    },
+  );
 
   testWidgets('muestra acciones cuando el permiso está denegado', (
     tester,
